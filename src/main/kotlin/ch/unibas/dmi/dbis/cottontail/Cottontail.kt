@@ -7,6 +7,7 @@ import ch.unibas.dmi.dbis.cottontail.server.grpc.CottontailGrpcServer
 import kotlinx.serialization.UnstableDefault
 
 import kotlinx.serialization.json.Json.Companion.parse
+import org.nd4j.linalg.factory.Nd4j
 
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -26,6 +27,9 @@ fun main(args: Array<String>) {
             } else {
                 args[0]
             }
+
+
+    Nd4j.getMemoryManager().togglePeriodicGc(false)
 
     /* Load config file and start Cottontail DB. */
     Files.newBufferedReader(Paths.get(path)).use { reader ->

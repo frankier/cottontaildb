@@ -6,6 +6,7 @@ import ch.unibas.dmi.dbis.cottontail.model.basics.ColumnDef
 import ch.unibas.dmi.dbis.cottontail.model.basics.Record
 import ch.unibas.dmi.dbis.cottontail.model.exceptions.QueryException
 import ch.unibas.dmi.dbis.cottontail.model.values.Value
+import org.nd4j.linalg.api.ndarray.INDArray
 
 /**
  * A general purpose [Predicate] that describes a Cottontail DB query. It can either operate on [Recordset]s or data read from an [Entity].
@@ -120,15 +121,15 @@ internal data class CompoundBooleanPredicate(val connector: ConnectionOperator, 
  * @author Ralph Gasser
  * @version 1.0
  */
-internal data class KnnPredicate<T : Any>(val column: ColumnDef<T>, val k: Int, val query: List<Array<Number>>, val distance: Distance, val weights: List<Array<Number>>? = null) : Predicate() {
+internal data class KnnPredicate<T : Any>(val column: ColumnDef<T>, val k: Int, val query: List<INDArray>, val distance: Distance, val weights: List<INDArray>? = null) : Predicate() {
     init {
         /* Some basic sanity checks. */
         if (k <= 0) throw QueryException.QuerySyntaxException("The value of k for a kNN query cannot be smaller than one (is $k)s!")
         query.forEach {
-            if (column.size != it.size) throw QueryException.QueryBindException("The size of the provided column ${column.name} (s_c=${column.size}) does not match the size of the query vector (s_q=${query.size}).")
+            if (column.size.toLong() != it.shape()[0]) throw QueryException.QueryBindException("The size of the provided column ${column.name} (s_c=${column.size}) does not match the size of the query vector (s_q=${query.size}).")
         }
         weights?.forEach {
-            if (column.size != it.size) {
+            if (column.size.toLong() != it.shape()[0]) {
                 throw QueryException.QueryBindException("The size of the provided column ${column.name} (s_c=${column.size}) does not match the size of the weight vector (s_w=${query.size}).")
             }
         }

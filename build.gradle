@@ -9,7 +9,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "com.google.protobuf:protobuf-gradle-plugin:0.8.8"
+        classpath "com.google.protobuf:protobuf-gradle-plugin:0.8.10"
         classpath "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlinVersion"
@@ -55,11 +55,11 @@ protobuf {
     generatedFilesBaseDir = "$projectDir/build/generated/source/proto"
     plugins {
         grpc {
-            artifact = 'io.grpc:protoc-gen-grpc-java:1.18.0'
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.23.0'
         }
     }
     protoc {
-        artifact = 'com.google.protobuf:protoc:3.6.1'
+        artifact = 'com.google.protobuf:protoc:3.9.1'
     }
     generateProtoTasks {
         all()*.plugins { grpc {
@@ -72,10 +72,14 @@ dependencies {
     ///// MapDB dependency
     compile group: 'org.mapdb', name: 'mapdb', version: '3.0.7'
 
+    /////
+    compile group: 'org.nd4j', name: 'nd4j-api', version: '1.0.0-beta4'
+    compile group: 'org.nd4j', name: 'nd4j-native-platform', version: '1.0.0-beta4'
+
     /////// GRPC & ProtoBuf
     compile group: 'javax.annotation', name: 'javax.annotation-api', version: '1.2'
-    compile group: 'com.google.protobuf', name: 'protobuf-java', version: '3.7.1'
-    compile group: 'io.grpc', name: 'grpc-all', version: '1.20.0'
+    compile group: 'com.google.protobuf', name: 'protobuf-java', version: '3.9.1'
+    compile group: 'io.grpc', name: 'grpc-all', version: '1.23.0'
 
     ////// Log4J
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.2'
@@ -105,7 +109,6 @@ dependencies {
 idea {
     module {
         downloadJavadoc = true
-
         excludeDirs += file('data')
     }
 }

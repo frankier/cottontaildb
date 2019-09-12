@@ -923,18 +923,21 @@ class CottontailStoreWAL(
         return ret.toList() //immutable copy
     }
 
+
+    fun getMaxRecordId() = this.maxRecid
+
     /**
      * A [LongIterator] that can be used to iterate over all record IDs.
      *
      * @author Ralph Gasser
      * @version 1.0
      */
-    inner class RecordIdIterator: LongIterator(), Closeable {
-        /** Creates a local snapshot of the maximum record ID. */
-        private val maximumRecordId = this@CottontailStoreWAL.maxRecid
-
+    inner class RecordIdIterator(val start: Long = 0, val end: Long = this@CottontailStoreWAL.maxRecid): LongIterator(), Closeable {
         /** Current record ID. */
-        private var currentRecordId = AtomicLong(0L)
+        private var currentRecordId = AtomicLong(this.start)
+
+        /** Creates a local snapshot of the maximum record ID. */
+        private val maximumRecordId = this.end
 
         /**
          * Creates a lock for this [LongIterator]

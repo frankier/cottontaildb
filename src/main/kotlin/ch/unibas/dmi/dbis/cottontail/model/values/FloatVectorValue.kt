@@ -1,6 +1,12 @@
 package ch.unibas.dmi.dbis.cottontail.model.values
 
-inline class FloatVectorValue(override val value: FloatArray) : Value<FloatArray> {
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j
+
+inline class FloatVectorValue(override val value: INDArray) : Value<INDArray> {
+
+    constructor(value: FloatArray): this(Nd4j.createFromArray(*value))
+
     override val numeric: Boolean
         get() = false
 

@@ -28,6 +28,10 @@ import java.util.concurrent.atomic.AtomicLong
  * @version 1.0
  */
 internal class Recordset(val columns: Array<ColumnDef<*>>) : Scanable, Filterable {
+    override fun forEach(from: Long, to: Long, action: (Record) -> Unit) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
     /** Internal counter for maximum tupleId. */
     private val maxTupleId = AtomicLong(0)
 

@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cottontail.model.values
 
+import org.nd4j.linalg.api.ndarray.INDArray
 import java.util.*
 
 
@@ -17,10 +18,7 @@ interface Value<T> {
     /** Size of this [Value]. -1 for all types except for vector types. */
     val size
         get() = when (this.value) {
-            is DoubleArray -> (value as DoubleArray).size
-            is FloatArray -> (value as FloatArray).size
-            is LongArray -> (value as LongArray).size
-            is IntArray -> (value as IntArray).size
+            is INDArray -> (value as INDArray).shape()[0].toInt()
             is BitSet -> (value as BitSet).length()
             else -> -1
         }

@@ -21,6 +21,8 @@ import ch.unibas.dmi.dbis.cottontail.model.exceptions.QueryException
 import ch.unibas.dmi.dbis.cottontail.model.values.Value
 import ch.unibas.dmi.dbis.cottontail.utilities.name.doesNameMatch
 import ch.unibas.dmi.dbis.cottontail.utilities.name.normalizeColumnName
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.Nd4j
 
 /**
  * This helper class parses and binds queries issued through the GRPC endpoint. The process encompasses three steps:
@@ -181,27 +183,27 @@ internal class GrpcQueryBinder(val catalogue: Catalogue, engine: ExecutionEngine
         val column = entity.columnForName(knn.attribute) ?: throw QueryException.QueryBindException("Failed to bind column '${knn.attribute}'. Column does not exist on entity '${entity.fqn}'!")
 
         /* Extracts the query vector. */
-        val query: List<Array<Number>> = knn.queryList.map { q ->
+        val query: List<INDArray> = knn.queryList.map { q ->
             when (q.vectorDataCase) {
-                CottontailGrpc.Vector.VectorDataCase.FLOATVECTOR -> q.floatVector.vectorList.toTypedArray() as Array<Number>
-                CottontailGrpc.Vector.VectorDataCase.DOUBLEVECTOR -> q.doubleVector.vectorList.toTypedArray() as Array<Number>
-                CottontailGrpc.Vector.VectorDataCase.INTVECTOR -> q.intVector.vectorList.toTypedArray() as Array<Number>
-                CottontailGrpc.Vector.VectorDataCase.LONGVECTOR -> q.longVector.vectorList.toTypedArray() as Array<Number>
-                CottontailGrpc.Vector.VectorDataCase.BOOLVECTOR -> q.boolVector.vectorList.let { v -> Array(v.size) { if (v[it]) 1 else 0 } } as Array<Number>
+                CottontailGrpc.Vector.VectorDataCase.FLOATVECTOR -> Nd4j.createFromArray(*FloatArray(q.floatVector.vectorList.size) { q.floatVector.vectorList[it] })
+                CottontailGrpc.Vector.VectorDataCase.DOUBLEVECTOR -> Nd4j.createFromArray(*DoubleArray(q.doubleVector.vectorList.size) { q.doubleVector.vectorList[it] })
+                CottontailGrpc.Vector.VectorDataCase.INTVECTOR ->  Nd4j.createFromArray(*IntArray(q.intVector.vectorList.size) { q.intVector.vectorList[it] })
+                CottontailGrpc.Vector.VectorDataCase.LONGVECTOR ->  Nd4j.createFromArray(*LongArray(q.longVector.vectorList.size) { q.longVector.vectorList[it] })
+                CottontailGrpc.Vector.VectorDataCase.BOOLVECTOR ->  Nd4j.createFromArray(*BooleanArray(q.longVector.vectorList.size) { q.boolVector.vectorList[it] })
                 CottontailGrpc.Vector.VectorDataCase.VECTORDATA_NOT_SET -> throw QueryException.QuerySyntaxException("A kNN predicate does not contain a valid query vector!")
                 null -> throw QueryException.QuerySyntaxException("A kNN predicate does not contain a valid query vector!")
             }
         }
 
         /* Extracts the query vector. */
-        val weights: List<Array<Number>>? = if (knn.weightsCount > 0) {
+        val weights: List<INDArray>? = if (knn.weightsCount > 0) {
             knn.weightsList.map { w ->
                 when (w.vectorDataCase) {
-                    CottontailGrpc.Vector.VectorDataCase.FLOATVECTOR -> w.floatVector.vectorList.toTypedArray() as Array<Number>
-                    CottontailGrpc.Vector.VectorDataCase.DOUBLEVECTOR -> w.doubleVector.vectorList.toTypedArray() as Array<Number>
-                    CottontailGrpc.Vector.VectorDataCase.INTVECTOR -> w.intVector.vectorList.toTypedArray() as Array<Number>
-                    CottontailGrpc.Vector.VectorDataCase.LONGVECTOR -> w.longVector.vectorList.toTypedArray() as Array<Number>
-                    CottontailGrpc.Vector.VectorDataCase.BOOLVECTOR -> w.boolVector.vectorList.let { v -> Array(v.size) { if (v[it]) 1 else 0 } } as Array<Number>
+                    CottontailGrpc.Vector.VectorDataCase.FLOATVECTOR -> Nd4j.createFromArray(*FloatArray(w.floatVector.vectorList.size) { w.floatVector.vectorList[it] })
+                    CottontailGrpc.Vector.VectorDataCase.DOUBLEVECTOR -> Nd4j.createFromArray(*DoubleArray(w.doubleVector.vectorList.size) { w.doubleVector.vectorList[it] })
+                    CottontailGrpc.Vector.VectorDataCase.INTVECTOR ->  Nd4j.createFromArray(*IntArray(w.intVector.vectorList.size) { w.intVector.vectorList[it] })
+                    CottontailGrpc.Vector.VectorDataCase.LONGVECTOR ->  Nd4j.createFromArray(*LongArray(w.longVector.vectorList.size) { w.longVector.vectorList[it] })
+                    CottontailGrpc.Vector.VectorDataCase.BOOLVECTOR ->  Nd4j.createFromArray(*BooleanArray(w.longVector.vectorList.size) { w.boolVector.vectorList[it] })
                     CottontailGrpc.Vector.VectorDataCase.VECTORDATA_NOT_SET -> throw QueryException.QuerySyntaxException("A kNN predicate does not contain a valid weight vector!")
                     null -> throw QueryException.QuerySyntaxException("A kNN predicate does not contain a valid weight vector!")
                 }

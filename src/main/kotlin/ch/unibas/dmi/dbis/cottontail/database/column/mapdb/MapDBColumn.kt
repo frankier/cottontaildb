@@ -54,7 +54,6 @@ internal class MapDBColumn<T : Any>(override val name: Name, override val parent
     private val header
         get() = store.get(HEADER_RECORD_ID, ColumnHeaderSerializer)
                 ?: throw DatabaseException.DataCorruptionException("Failed to open header of column '$fqn'!'")
-
     /**
      * Getter for this [MapDBColumn]'s [ColumnDef].
      *
@@ -70,6 +69,9 @@ internal class MapDBColumn<T : Any>(override val name: Name, override val parent
     @Volatile
     override var closed: Boolean = false
         private set
+
+    override val maxTupleId: Long
+        get() = this.store.getMaxRecordId()
 
     /** An internal lock that is used to synchronize concurrent read & write access to this [MapDBColumn] by different [MapDBColumn.Tx]. */
     private val txLock = StampedLock()
@@ -255,6 +257,18 @@ internal class MapDBColumn<T : Any>(override val name: Name, override val parent
             }
         }
 
+        override fun forEach(from: Long, to: Long, action: (Record) -> Unit) {
+            checkValidOrThrow()
+            this@MapDBColumn.store.RecordIdIterator(from, to).use { recordIds ->
+                recordIds.forEachRemaining {
+                    if (it != CottontailStoreWAL.EOF_ENTRY) {
+                        action(ColumnRecord(it, this@MapDBColumn.store.get(it, this.serializer)))
+                    }
+                }
+            }
+        }
+
+
         /**
          * Applies the provided mapping function on each value found in this [MapDBColumn], returning a collection
          * of the desired output values.
@@ -387,11 +401,9 @@ internal class MapDBColumn<T : Any>(override val name: Name, override val parent
         override fun forEach(parallelism: Short, action: (Record) -> Unit) {
             runBlocking {
                 checkValidOrThrow()
-                this@MapDBColumn.store.RecordIdIterator().use { recordIds ->
-                    if (recordIds.next() != HEADER_RECORD_ID) {
-                        throw TransactionException.TransactionValidationException(this@Tx.tid, "The column '${this@MapDBColumn.fqn}' does not seem to contain a valid header record!")
-                    }
-                    val jobs = Array(parallelism.toInt()) {
+                val blocksize = this@MapDBColumn.store.getMaxRecordId()/parallelism
+                val jobs = Array(parallelism.toInt()) {
+                    this@MapDBColumn.store.RecordIdIterator(blocksize*it, blocksize*it + blocksize).use { recordIds ->
                         GlobalScope.launch {
                             while (recordIds.hasNext()) {
                                 val tupleId = recordIds.next()
@@ -401,8 +413,8 @@ internal class MapDBColumn<T : Any>(override val name: Name, override val parent
                             }
                         }
                     }
-                    jobs.forEach { it.join() }
                 }
+                jobs.forEach { it.join() }
             }
         }
 

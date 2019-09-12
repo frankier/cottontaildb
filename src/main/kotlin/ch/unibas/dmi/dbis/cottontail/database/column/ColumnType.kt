@@ -4,6 +4,7 @@ import ch.unibas.dmi.dbis.cottontail.database.serializers.*
 import ch.unibas.dmi.dbis.cottontail.model.values.*
 
 import org.mapdb.Serializer
+import org.nd4j.linalg.api.ndarray.INDArray
 import java.util.*
 
 import kotlin.reflect.KClass
@@ -140,46 +141,46 @@ class StringColumnType : ColumnType<String>() {
 }
 
 @Suppress("UNCHECKED_CAST")
-class IntVectorColumnType : ColumnType<IntArray>() {
+class IntVectorColumnType : ColumnType<INDArray>() {
     override val name = "INT_VEC"
     override val numeric = false
     override val type: KClass<IntVectorValue> = IntVectorValue::class
-    override fun serializer(size: Int): Serializer<Value<IntArray>> {
+    override fun serializer(size: Int): Serializer<Value<INDArray>> {
         if (size <= 0) throw IllegalArgumentException("Size attribute for a $name type must be > 0 (is $size).")
-        return FixedIntVectorSerializer(size) as Serializer<Value<IntArray>>
+        return FixedIntVectorSerializer(size) as Serializer<Value<INDArray>>
     }
 }
 
 @Suppress("UNCHECKED_CAST")
-class LongVectorColumnType : ColumnType<LongArray>() {
+class LongVectorColumnType : ColumnType<INDArray>() {
     override val name = "LONG_VEC"
     override val numeric = false
     override val type: KClass<LongVectorValue> = LongVectorValue::class
-    override fun serializer(size: Int): Serializer<Value<LongArray>> {
+    override fun serializer(size: Int): Serializer<Value<INDArray>> {
         if (size <= 0) throw IllegalArgumentException("Size attribute for a $name type must be > 0 (is $size).")
-        return FixedLongVectorSerializer(size) as Serializer<Value<LongArray>>
+        return FixedLongVectorSerializer(size) as Serializer<Value<INDArray>>
     }
 }
 
 @Suppress("UNCHECKED_CAST")
-class FloatVectorColumnType : ColumnType<FloatArray>() {
+class FloatVectorColumnType : ColumnType<INDArray>() {
     override val name = "FLOAT_VEC"
     override val numeric = false
     override val type: KClass<FloatVectorValue> = FloatVectorValue::class
-    override fun serializer(size: Int): Serializer<Value<FloatArray>> {
+    override fun serializer(size: Int): Serializer<Value<INDArray>> {
         if (size <= 0) throw IllegalArgumentException("Size attribute for a $name type must be > 0 (is $size).")
-        return FixedFloatVectorSerializer(size) as Serializer<Value<FloatArray>>
+        return FixedFloatVectorSerializer(size) as Serializer<Value<INDArray>>
     }
 }
 
 @Suppress("UNCHECKED_CAST")
-class DoubleVectorColumnType : ColumnType<DoubleArray>() {
+class DoubleVectorColumnType : ColumnType<INDArray>() {
     override val name = "DOUBLE_VEC"
     override val numeric = false
     override val type: KClass<DoubleVectorValue> = DoubleVectorValue::class
-    override fun serializer(size: Int): Serializer<Value<DoubleArray>> {
+    override fun serializer(size: Int): Serializer<Value<INDArray>> {
         if (size <= 0) throw IllegalArgumentException("Size attribute for a $name type must be > 0 (is $size).")
-        return FixedDoubleVectorSerializer(size) as Serializer<Value<DoubleArray>>
+        return FixedDoubleVectorSerializer(size) as Serializer<Value<INDArray>>
     }
 }
 

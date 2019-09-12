@@ -102,7 +102,7 @@ internal class Entity(n: Name, schema: Schema) : DBO {
      *
      * @return [EntityStatistics] for this [Entity].
      */
-    val statistics: EntityStatistics = this.header.let { EntityStatistics(it.columns.size, it.size) }
+    val statistics: EntityStatistics = this.header.let { EntityStatistics(it.columns.size, it.size, this.columns.first().maxTupleId) }
 
     /**
      * Checks if this [Entity] can process the provided [Predicate] natively (without index).
@@ -464,6 +464,23 @@ internal class Entity(n: Name, schema: Schema) : DBO {
             val data = Array<Value<*>?>(columns.size) { null }
 
             this.columns.getValue(columns[0]).forEach {
+                data[0] = it.values[0]
+                for (i in 1 until columns.size) {
+                    data[i] = this.columns.getValue(columns[i]).read(it.tupleId)
+                }
+                action(StandaloneRecord(it.tupleId, columns).assign(data))
+            }
+        }
+
+        /**
+         *
+         */
+        override fun forEach(from: Long, to: Long, action: (Record) -> Unit) {
+            checkValidOrThrow()
+            val columns = this.columns.keys.toTypedArray()
+            val data = Array<Value<*>?>(columns.size) { null }
+            val maxTupleId = this@Entity.statistics.maxTupleId
+            this.columns.getValue(columns[0]).forEach(from.coerceAtLeast(1), to.coerceAtMost(maxTupleId)) {
                 data[0] = it.values[0]
                 for (i in 1 until columns.size) {
                     data[i] = this.columns.getValue(columns[i]).read(it.tupleId)

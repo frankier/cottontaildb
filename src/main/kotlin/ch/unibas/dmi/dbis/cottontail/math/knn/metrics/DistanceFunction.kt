@@ -1,5 +1,6 @@
 package ch.unibas.dmi.dbis.cottontail.math.knn.metrics
 
+import org.nd4j.linalg.api.ndarray.INDArray
 import java.util.*
 
 
@@ -25,40 +26,7 @@ interface DistanceFunction {
      *
      * @return Distance between a and b.
      */
-    operator fun invoke(a: FloatArray, b: FloatArray, weights: FloatArray): Double
-
-    /**
-     * Calculates the weighted distance between two [DoubleArray]s
-     *
-     * @param a First [DoubleArray]
-     * @param b Second [DoubleArray]
-     * @param weights The [DoubleArray] containing the weights.
-     *
-     * @return Distance between a and b.
-     */
-    operator fun invoke(a: DoubleArray, b: DoubleArray, weights: DoubleArray): Double
-
-    /**
-     * Calculates the weighted distance between two [LongArray]s
-     *
-     * @param a First [LongArray]
-     * @param b Second [LongArray]
-     * @param weights The [FloatArray] containing the weights.
-     *
-     * @return Distance between a and b.
-     */
-    operator fun invoke(a: LongArray, b: LongArray, weights: FloatArray): Double
-
-    /**
-     * Calculates the weighted distance between two [IntArray]s
-     *
-     * @param a First [IntArray]
-     * @param b Second [IntArray]
-     * @param weights The [FloatArray] containing the weights.
-     *
-     * @return Distance between a and b.
-     */
-    operator fun invoke(a: IntArray, b: IntArray, weights: FloatArray): Double
+    operator fun invoke(a: INDArray, b: INDArray, weights: INDArray): Double
 
     /**
      * Calculates the weighted distance between two [BitSet]s, i.e. [BooleanArray]'s where
@@ -79,34 +47,7 @@ interface DistanceFunction {
      * @param b Second [FloatArray]
      * @return Distance between a and b.
      */
-    operator fun invoke(a: FloatArray, b: FloatArray): Double
-
-    /**
-     * Calculates the distance between two [DoubleArray]s
-     *
-     * @param a First [DoubleArray]
-     * @param b Second [DoubleArray]
-     * @return Distance between a and b.
-     */
-    operator fun invoke(a: DoubleArray, b: DoubleArray): Double
-
-    /**
-     * Calculates the distance between two [LongArray]s
-     *
-     * @param a First [LongArray]
-     * @param b Second [LongArray]
-     * @return Distance between a and b.
-     */
-    operator fun invoke(a: LongArray, b: LongArray): Double
-
-    /**
-     * Calculates the distance between two [IntArray]s
-     *
-     * @param a First [IntArray]
-     * @param b Second [IntArray]
-     * @return Distance between a and b.
-     */
-    operator fun invoke(a: IntArray, b: IntArray): Double
+    operator fun invoke(a: INDArray, b: INDArray): Double
 
     /**
      * Calculates the distance between two [BitSet]s, i.e. [BooleanArray]'s where

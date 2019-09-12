@@ -35,6 +35,11 @@ internal interface Column<T: Any> : DBO {
         get() = this.columnDef.size
 
     /**
+     *
+     */
+    val maxTupleId: Long
+
+    /**
      * Whether or not this [Column] is nullable. Columns that are not nullable, cannot hold any
      * null values.
      *
@@ -42,8 +47,6 @@ internal interface Column<T: Any> : DBO {
      */
     val nullable: Boolean
         get() = this.columnDef.nullable
-
-
 
     /**
      * Creates a new [ColumnTransaction] and returns it.

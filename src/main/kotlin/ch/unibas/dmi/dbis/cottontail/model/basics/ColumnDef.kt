@@ -5,6 +5,8 @@ import ch.unibas.dmi.dbis.cottontail.model.exceptions.DatabaseException
 import ch.unibas.dmi.dbis.cottontail.model.exceptions.ValidationException
 import ch.unibas.dmi.dbis.cottontail.model.values.*
 import ch.unibas.dmi.dbis.cottontail.utilities.name.Name
+import org.nd4j.linalg.api.buffer.DataType
+import org.nd4j.linalg.factory.Nd4j
 
 import java.lang.RuntimeException
 import java.util.*
@@ -95,10 +97,10 @@ class ColumnDef<T: Any> (name: Name, val type: ColumnType<T>, val size: Int = -1
         this.type is ShortColumnType -> ShortValue(0.toShort())
         this.type is ByteColumnType -> ByteValue(0.toByte())
         this.type is BooleanColumnType -> BooleanValue(false)
-        this.type is DoubleVectorColumnType -> DoubleVectorValue(DoubleArray(this.size))
-        this.type is FloatVectorColumnType -> FloatVectorValue(FloatArray(this.size))
-        this.type is LongVectorColumnType -> LongVectorValue(LongArray(this.size))
-        this.type is IntVectorColumnType -> IntVectorValue(IntArray(this.size))
+        this.type is DoubleVectorColumnType -> DoubleVectorValue(Nd4j.zeros(DataType.DOUBLE, this.size))
+        this.type is FloatVectorColumnType -> FloatVectorValue(Nd4j.zeros(DataType.FLOAT, this.size))
+        this.type is LongVectorColumnType -> LongVectorValue(Nd4j.zeros(DataType.LONG, this.size))
+        this.type is IntVectorColumnType -> IntVectorValue(Nd4j.zeros(DataType.INT, this.size))
         this.type is BooleanVectorColumnType -> BooleanVectorValue(BitSet(this.size))
         else -> throw RuntimeException("Default value for the specified type $type has not been specified yet!")
     }

@@ -19,6 +19,15 @@ interface Scanable {
     fun forEach(action: (Record) -> Unit)
 
     /**
+     * Applies the provided action to each [Record] in this [Recordset].
+     *
+     * @param action The action that should be applied.
+     * @param from
+     * @param to
+     */
+    fun forEach(from: Long, to: Long, action: (Record) -> Unit)
+
+    /**
      * Applies the provided mapping function to each [Record] in this [Filterable].
      *
      * @param action The mapping function that should be applied.
