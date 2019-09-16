@@ -20,6 +20,7 @@ import org.nd4j.linalg.api.ndarray.INDArray
 import org.nd4j.linalg.api.ops.impl.reduce3.EuclideanDistance
 import org.nd4j.linalg.api.ops.impl.reduce3.ManhattanDistance
 import org.nd4j.linalg.factory.Nd4j
+import org.nd4j.linalg.ops.transforms.Transforms
 
 /**
  * A [Task] that executes a parallel boolean kNN on a double [Column] of the specified [Entity].
@@ -48,7 +49,15 @@ internal class ParallelEntityScanKnnTask(val entity: Entity, val knn: KnnPredica
 
         /* Make some calculations (number of columns, numberOfQueries, size of a batch). */
         val stride = this.entity.statistics.maxTupleId / this.parallelism
-        val numberOfQueries = this@ParallelEntityScanKnnTask.knn.query.size
+        val columnSize = this.knn.column.size
+        val numberOfQueries = this.knn.query.size
+        val batchSize = 4096 * numberOfQueries
+        val dataType = this.knn.query.first().dataType()
+        /* Prepare query tensor. */
+        val query = Nd4j.createUninitialized(dataType, columnSize.toLong(), batchSize.toLong())
+        for (i in 0 until batchSize) {
+            query.putColumn(i, this.knn.query[i % numberOfQueries])
+        }
 
         /*  Prepare INDArray for query. */
         val exec = Nd4j.getExecutioner()
@@ -60,13 +69,25 @@ internal class ParallelEntityScanKnnTask(val entity: Entity, val knn: KnnPredica
                     GlobalScope.launch {
                         val start = stride * j + 1
                         val end = stride * j + 1 + stride - 1
+                        val value = Nd4j.createUninitialized(dataType, columnSize.toLong(), batchSize.toLong())
+                        val op = ManhattanDistance(query, value, 0)
+                        var idx = 0
+
+
+                        Transforms
                         tx.forEach(start, end) { it ->
                             if (this@ParallelEntityScanKnnTask.predicate == null || this@ParallelEntityScanKnnTask.predicate.matches(it)) {
                                 val v = it[this@ParallelEntityScanKnnTask.knn.column]
                                 if (v != null) {
                                     for (i in 0 until numberOfQueries) {
-                                        val op = ManhattanDistance(this@ParallelEntityScanKnnTask.knn.query[i], v.value)
-                                        this@ParallelEntityScanKnnTask.knnSet[i].add(ComparablePair(it.tupleId, exec.execAndReturn(op).finalResult.toDouble()))
+                                        value.putColumn(idx++, v.value)
+                                    }
+                                    if (idx == batchSize) {
+                                        val result = exec.exec(op)
+                                        for (i in 0 until batchSize) {
+                                            this@ParallelEntityScanKnnTask.knnSet[i % numberOfQueries].add(ComparablePair(it.tupleId, result.getDouble(i)))
+                                        }
+                                        idx = 0
                                     }
                                 }
                             }

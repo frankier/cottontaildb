@@ -21,8 +21,8 @@ class FixedFloatVectorSerializer(val size: Int): Serializer<FloatVectorValue> {
     }
     override fun deserialize(input: DataInput2, available: Int): FloatVectorValue {
         val vector = Nd4j.createUninitialized(DataType.FLOAT, this.size.toLong())
-        for (i in 0 until size) {
-            vector.putScalar(i.toLong(), input.readFloat())
+        for (i in 0L until size.toLong()) {
+            vector.putScalar(i, input.readFloat())
         }
         return FloatVectorValue(vector)
     }
