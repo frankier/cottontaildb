@@ -85,7 +85,7 @@ class SuperBitLSHIndex<T : VectorValue<*>>(name: Name, parent: Entity, columns: 
             }
 
             /* Generate record set .*/
-            for ((bucket, queryIndices) in queryIndicesPerBucket) {
+            queryIndicesPerBucket.toList().parallelStream().forEach { (bucket, queryIndices) ->
                 println("bucket $bucket, ${queryIndices.size} query vectors")
 
                 val tupleIds = this.map[bucket]
