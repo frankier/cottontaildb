@@ -10,6 +10,7 @@ import org.vitrivr.cottontail.server.grpc.CottontailGrpcServer
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.system.exitProcess
+import kotlin.time.ExperimentalTime
 
 /**
  * Entry point for Cottontail DB demon and CLI.
@@ -17,6 +18,7 @@ import kotlin.system.exitProcess
  * @param args Program arguments.
  */
 @UnstableDefault
+@ExperimentalTime
 fun main(args: Array<String>) {
 
     /* Handle case when arguments are empty. */
@@ -42,6 +44,7 @@ fun main(args: Array<String>) {
 /**
  * Traditional Cottontail DB server startup
  */
+@ExperimentalTime
 fun startDB(configPath: String = "config.json") {
     /* Load config file and start Cottontail DB. */
     Files.newBufferedReader(Paths.get(configPath)).use { reader ->

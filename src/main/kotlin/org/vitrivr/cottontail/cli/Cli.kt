@@ -12,6 +12,7 @@ import org.vitrivr.cottontail.server.grpc.CottontailGrpcServer
 import java.io.IOException
 import java.util.*
 import java.util.regex.Pattern
+import kotlin.time.ExperimentalTime
 
 /**
  * Command line interface instance.  Setup and general parsing. Actual commands are implemented as
@@ -28,6 +29,7 @@ object Cli {
     private const val PROMPT = "cottontaildb>"
 
     /** CottotanilGrpcServer instance; user for gracefully stoppin the CLI. */
+    @ExperimentalTime
     lateinit var cottontailServer: CottontailGrpcServer
 
 
@@ -95,7 +97,7 @@ object Cli {
         val terminal: Terminal?
         try {
             terminal = TerminalBuilder.terminal()
-        }catch(e:IOException){
+        } catch (e: IOException) {
             error("Could not init terminal for reason:\n" +
                     "${e.message}\n" +
                     "Exiting...")
@@ -105,18 +107,18 @@ object Cli {
 
         val lineReader = LineReaderBuilder.builder().terminal(terminal).completer(completer).build()
 
-        while(true){
+        while (true) {
             val line = lineReader.readLine(PROMPT).trim()
-            if(line.toLowerCase() == "help"){
+            if (line.toLowerCase() == "help") {
                 println(clikt.getFormattedHelp())
                 continue
             }
-            if(line.isBlank()){
+            if (line.isBlank()) {
                 continue
             }
-            try{
+            try {
                 clikt.parse(splitLine(line))
-            }catch(e:Exception){
+            } catch (e: Exception) {
                 when (e) {
                     is com.github.ajalt.clikt.core.NoSuchSubcommand -> println("command not found")
                     is com.github.ajalt.clikt.core.PrintHelpMessage -> println(e.command.getFormattedHelp())
@@ -153,8 +155,9 @@ object Cli {
         return matchList
     }
 
-    fun stopServer(){
-        if (::cottontailServer.isInitialized){
+    @ExperimentalTime
+    fun stopServer() {
+        if (::cottontailServer.isInitialized) {
             cottontailServer.stop()
         }
     }

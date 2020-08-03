@@ -11,8 +11,8 @@ import org.vitrivr.cottontail.execution.tasks.basics.ExecutionStage
 import org.vitrivr.cottontail.execution.tasks.entity.fetch.EntityFetchColumnsTask
 import org.vitrivr.cottontail.execution.tasks.recordset.projection.*
 import org.vitrivr.cottontail.model.basics.ColumnDef
+import org.vitrivr.cottontail.model.basics.Name
 import org.vitrivr.cottontail.model.exceptions.QueryException
-import org.vitrivr.cottontail.utilities.name.Name
 
 /**
  * Formalizes a [ProjectionNodeExpression] operation in the Cottontail DB query execution engine.
@@ -20,38 +20,22 @@ import org.vitrivr.cottontail.utilities.name.Name
  * @author Ralph Gasser
  * @version 1.1
  */
-data class ProjectionNodeExpression(val type: Projection = Projection.SELECT, val entity: Entity, val columns: Array<ColumnDef<*>>, val fields: Map<Name, Name?>) : AbstractNodeExpression() {
+data class ProjectionNodeExpression(val type: Projection = Projection.SELECT, val entity: Entity, val columns: Array<ColumnDef<*>>, val fields: Map<Name.ColumnName, Name.ColumnName?>) : AbstractNodeExpression() {
     init {
         /* Sanity check. */
         when (type) {
-            Projection.SELECT -> if (columns.isEmpty()) {
-                throw QueryException.QuerySyntaxException("Projection of type $type must specify at least one column.")
-            }
-            Projection.SELECT_DISTINCT -> if (columns.isEmpty()) {
-                throw QueryException.QuerySyntaxException("Projection of type $type must specify at least one column.")
-            }
+            Projection.SELECT,
+            Projection.SELECT_DISTINCT,
             Projection.COUNT_DISTINCT -> if (columns.isEmpty()) {
                 throw QueryException.QuerySyntaxException("Projection of type $type must specify at least one column.")
             }
+            Projection.MEAN,
+            Projection.SUM,
+            Projection.MIN,
             Projection.MAX -> if (columns.isEmpty()) {
                 throw QueryException.QuerySyntaxException("Projection of type $type must specify a column.")
             } else if (!columns.first().type.numeric) {
                 throw QueryException.QueryBindException("Projection of type $type can only be applied on a numeric column, which ${columns.first().name} is not.")
-            }
-            Projection.MIN -> if (columns.isEmpty()) {
-                throw QueryException.QuerySyntaxException("Projection of type $type must specify a column.")
-            } else if (!columns.first().type.numeric) {
-                throw QueryException.QueryBindException("Projection of type $type can only be applied to a numeric column, which ${columns.first().name} is not.")
-            }
-            Projection.SUM -> if (columns.isEmpty()) {
-                throw QueryException.QuerySyntaxException("Projection of type $type must specify a column.")
-            } else if (!columns.first().type.numeric) {
-                throw QueryException.QueryBindException("Projection of type $type can only be applied to a numeric column, which ${columns.first().name} is not.")
-            }
-            Projection.MEAN -> if (columns.isEmpty()) {
-                throw QueryException.QuerySyntaxException("Projection of type $type must specify a column.")
-            } else if (!columns.first().type.numeric) {
-                throw QueryException.QueryBindException("Projection of type $type can only be applied to a numeric column, which ${columns.first().name} is not.")
             }
             else -> {
             }

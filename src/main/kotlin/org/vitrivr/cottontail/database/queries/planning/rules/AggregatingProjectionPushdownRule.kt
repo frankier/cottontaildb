@@ -24,7 +24,7 @@ object AggregatingProjectionPushdownRule : NodeRewriteRule {
             if (p1 is EntityScanNodeExpression.FullEntityScanNodeExpression) {
                 val column = node.columns.firstOrNull()
                 val res = if (column != null) {
-                    AggregatingProjectionPushdownNodeExpression(node.type, p1.entity, column, node.fields[column.name]?.name)
+                    AggregatingProjectionPushdownNodeExpression(node.type, p1.entity, column, node.fields[column.name]?.simple)
                 } else {
                     AggregatingProjectionPushdownNodeExpression(node.type, p1.entity, null, null)
                 }

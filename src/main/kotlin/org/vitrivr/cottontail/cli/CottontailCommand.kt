@@ -7,6 +7,7 @@ import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.output.CliktHelpFormatter
 import com.github.ajalt.clikt.output.HelpFormatter
 import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.arguments.convert
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
@@ -17,7 +18,12 @@ import org.vitrivr.cottontail.grpc.CottonDDLGrpc
 import org.vitrivr.cottontail.grpc.CottonDMLGrpc
 import org.vitrivr.cottontail.grpc.CottonDQLGrpc
 import org.vitrivr.cottontail.grpc.CottontailGrpc
-import kotlin.system.exitProcess
+import org.vitrivr.cottontail.model.basics.Name
+import org.vitrivr.cottontail.model.basics.Name.Companion.NAME_COMPONENT_DELIMITER
+import org.vitrivr.cottontail.server.grpc.helper.fqn
+import org.vitrivr.cottontail.server.grpc.helper.proto
+import org.vitrivr.cottontail.server.grpc.helper.protoFrom
+import kotlin.time.ExperimentalTime
 
 /**
  * Wrapper class and single access point to the actual commands.  Also, provides the gRPC bindings
@@ -44,7 +50,8 @@ class CottontailCommand(private val host: String, private val port: Int) : NoOpC
                 CountEntityCommand(),
                 QueryByColumnValueEqualsEntityCommand(),
                 ReloadCommand(),
-                StopCommand())
+                StopCommand()
+        )
 
         initDbCon(host, port)
     }
@@ -56,7 +63,7 @@ class CottontailCommand(private val host: String, private val port: Int) : NoOpC
 
 
     /**
-     * Initialises the db connection
+     * Initialises the gRPC connection to database.
      */
     private fun initDbCon(host: String, port: Int) {
         if (::channel.isInitialized) {
@@ -64,27 +71,25 @@ class CottontailCommand(private val host: String, private val port: Int) : NoOpC
             channel.shutdownNow()
         }
         channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build()
-
         dqlService = CottonDQLGrpc.newBlockingStub(channel)
         ddlService = CottonDDLGrpc.newBlockingStub(channel)
         dmlService = CottonDMLGrpc.newBlockingStub(channel)
     }
 
+    /**
+     * Initializes list of strings of autocomplete.
+     */
     fun initCompletion() {
-        val schemata = mutableListOf<CottontailGrpc.Schema>()
-        val entities = mutableListOf<CottontailGrpc.Entity>()
+        val schemata = mutableListOf<Name.SchemaName>()
+        val entities = mutableListOf<Name.EntityName>()
         this@CottontailCommand.ddlService.listSchemas(CottontailGrpc.Empty.getDefaultInstance()).forEach { _schema ->
-            schemata.add(_schema)
+            schemata.add(_schema.fqn())
             this@CottontailCommand.ddlService.listEntities(_schema).forEach { _entity ->
-                if (_entity.schema.name != _schema.name) {
-                    // something is wrong. We ignore it currently
-                }
-                entities.add(_entity)
+                entities.add(_entity.fqn())
             }
         }
-        Cli.updateArgumentCompletion(schemata = schemata.map { it.name }, entities = entities.map { it.name })
+        Cli.updateArgumentCompletion(schemata = schemata.map { it.toString() }, entities = entities.map { it.toString() })
     }
-
 
     /**
      * Base class for none entity specific commands (for potential future generalisation)
@@ -108,9 +113,15 @@ class CottontailCommand(private val host: String, private val port: Int) : NoOpC
     /**
      * Base class for entity specific commands, providing / querying from user schema and entity as arguments
      */
+    abstract inner class AbstractSchemaCommand(name: String, help: String) : AbstractCottontailCommand(name = name, help = help) {
+        protected val schema: Name.SchemaName by argument(name = "schema", help = "The schema name this command targets at").convert { Name.SchemaName(*it.split(NAME_COMPONENT_DELIMITER).toTypedArray()) }
+    }
+
+    /**
+     * Base class for entity specific commands, providing / querying from user schema and entity as arguments
+     */
     abstract inner class AbstractEntityCommand(name: String, help: String) : AbstractCottontailCommand(name = name, help = help) {
-        protected val schema: String by argument(name = "schema", help = "The schema name this command targets at")
-        protected val entity: String by argument(name = "entity", help = "The entity name this command targets at")
+        protected val entity: Name.EntityName by argument(name = "entity", help = "The entity name this command targets at").convert { Name.EntityName(*it.split(NAME_COMPONENT_DELIMITER).toTypedArray()) }
     }
 
     /**
@@ -119,12 +130,8 @@ class CottontailCommand(private val host: String, private val port: Int) : NoOpC
     inner class ListAllEntitiesCommand : AbstractCottontailCommand(name = "list", help = "Lists all entities in all schemata") {
         override fun exec() {
             this@CottontailCommand.ddlService.listSchemas(CottontailGrpc.Empty.getDefaultInstance()).forEach { _schema ->
-                println("Entities for Schema ${_schema.name}:")
                 this@CottontailCommand.ddlService.listEntities(_schema).forEach { _entity ->
-                    if (_entity.schema.name != _schema.name) {
-                        println("Data integrity threat! entity $_entity ist returned when listing entities for schema $_schema")
-                    }
-                    println("  ${_entity.name}")
+                    println(_entity.fqn().toString())
                 }
             }
         }
@@ -136,30 +143,28 @@ class CottontailCommand(private val host: String, private val port: Int) : NoOpC
     inner class PreviewEntityCommand : AbstractEntityCommand(name = "preview", help = "Gives a preview of the entity specified") {
         private val limit: Long by option("-l", "--limit", help = "Limits the amount of printed results").long().default(10).validate { require(it > 0) }
         override fun exec() {
-            println("Showing first $limit elements of entity $schema.$entity")
+            println("Showing first $limit elements of entity $entity")
             val qm = CottontailGrpc.QueryMessage.newBuilder().setQuery(
                     CottontailGrpc.Query.newBuilder()
-                            .setFrom(From(Entity(entity, Schema(schema))))
+                            .setFrom(this.entity.protoFrom())
                             .setProjection(MatchAll())
-                            .setLimit(limit)
+                            .setLimit(this.limit)
             ).build()
             val query = this@CottontailCommand.dqlService.query(qm)
-            println("Previewing $limit elements of $entity")
-            query.forEach { page ->
-                println(page.resultsList.dropLast(Math.max(0, page.resultsCount - limit).toInt()))
-            }
+            println("Previewing $limit elements of $entity:")
+            query.forEach { result -> println(result.tuple) }
         }
 
     }
 
     /**
-     * COmmand for entity details
+     * Command for entity details
      */
     inner class ShowEntityCommand : AbstractEntityCommand(name = "show", help = "Gives an overview of the entity and its columns") {
         override fun exec() {
-            val details = this@CottontailCommand.ddlService.entityDetails(Entity(entity, Schema(schema)))
+            val details = this@CottontailCommand.ddlService.entityDetails(this.entity.proto())
             println("Entity ${details.entity.schema.name}.${details.entity.name} with ${details.columnsCount} columns: ")
-            print("  ${details.columnsList.map { "${it.name} (${it.type})" }.joinToString(", ")}")
+            details.columnsList.forEach { println("\t${it.name}(type=${it.type}, size=${it.length}, unique=${it.unique}, nullable=${it.nullable})") }
         }
     }
 
@@ -168,37 +173,38 @@ class CottontailCommand(private val host: String, private val port: Int) : NoOpC
      */
     inner class OptimizeEntityCommand : AbstractEntityCommand(name = "optimize", help = "Optimizes the specified entity, e.g. rebuilds the indices") {
         override fun exec() {
-            println("Optimizing entity $schema.$entity")
-            this@CottontailCommand.ddlService.optimizeEntity(Entity(entity, Schema(schema)))
+            println("Optimizing entity $entity. Please be patient...")
+            this@CottontailCommand.ddlService.optimizeEntity(this.entity.proto())
             println("Optimization complete!")
         }
     }
 
+    /**
+     * Command to count elements in entity.
+     */
     inner class CountEntityCommand : AbstractEntityCommand(name = "count", help = "Counts the given entity's rows") {
         override fun exec() {
-            println("Counting elements of entity $schema.$entity")
             val qm = CottontailGrpc.QueryMessage.newBuilder().setQuery(
                     CottontailGrpc.Query.newBuilder()
-                            .setFrom(From(Entity(entity, Schema(schema))))
+                            .setFrom(this.entity.protoFrom())
                             .setProjection(CottontailGrpc.Projection.newBuilder().setOp(CottontailGrpc.Projection.Operation.COUNT).build())
 
             ).build()
             val query = this@CottontailCommand.dqlService.query(qm)
-            query.forEach { page ->
-                if (!page.resultsList.isEmpty()) {
-                    println(page.resultsList.first())
-                }
-            }
+            query.forEach { result -> println(result.tuple) }
         }
     }
 
+    /**
+     * Command to count elements in entity.
+     */
     inner class QueryByColumnValueEqualsEntityCommand : AbstractEntityCommand(name = "find", help = "Find within an entity by column-value specification") {
         val col: String by option("-c", "--column", help = "Column name").required()
         val value: String by option("-v", "--value", help = "The value").required()
         override fun exec() {
             val qm = CottontailGrpc.QueryMessage.newBuilder().setQuery(
                     CottontailGrpc.Query.newBuilder()
-                            .setFrom(From(Entity(entity, Schema(schema))))
+                            .setFrom(this.entity.protoFrom())
                             .setProjection(MatchAll())
                             .setWhere(Where(
                                     CottontailGrpc.AtomicLiteralBooleanPredicate.newBuilder()
@@ -210,11 +216,13 @@ class CottontailCommand(private val host: String, private val port: Int) : NoOpC
             ).build()
             val query = this@CottontailCommand.dqlService.query(qm)
             var size = 0
-            query.forEach { page ->
-                println(page.resultsList)
-                size += page.resultsCount
+            query.forEach { result ->
+                if (result.hits > 0) {
+                    println(result.tuple)
+                    size += 1
+                }
             }
-            println("Printed $size individual results")
+            println("Found and printed $size results.")
         }
     }
 
@@ -223,8 +231,8 @@ class CottontailCommand(private val host: String, private val port: Int) : NoOpC
      */
     inner class DropEntityCommand : AbstractEntityCommand(name = "drop", help = "Drops the given entity from the database and deletes it therefore") {
         override fun exec() {
-            this@CottontailCommand.ddlService.dropEntity(Entity(entity, Schema(schema)))
-            println("Dropped entity $schema.$entity")
+            this@CottontailCommand.ddlService.dropEntity(this.entity.proto())
+            println("Successfully dropped entity ${this.entity}.")
         }
     }
 
@@ -252,11 +260,11 @@ class CottontailCommand(private val host: String, private val port: Int) : NoOpC
      * Stops the entire application
      */
     inner class StopCommand : AbstractCottontailCommand(name = "stop", help = "Stops the database server and this CLI") {
+        @ExperimentalTime
         override fun exec() {
             println("Stopping now...")
             this@CottontailCommand.channel.shutdown()
             Cli.stopServer()
-            exitProcess(0)
         }
     }
 
